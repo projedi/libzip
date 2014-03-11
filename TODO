@@ -55,7 +55,7 @@ Features
 
 Bugs
 ====
-! add autoconf tests for fts (zipcmp)
+! invalidate zip_source_zip when source archive is closed
 * embed stripped down old zlib for torrentzip
 ! ensure that nentries is small enough not to cause overflow (size_t for entry, uint64 for CD on disk)
 * Xcode 32bit build uses 64bit config.h
@@ -64,7 +64,6 @@ Bugs
 * split zip archive torrentzip state from user requested torrentzip state
 * check for limits imposed by format (central dir size, file size, extra fields, ...)
 * _zip_u2d_time: handle localtime(3) failure
-* missing -Wl,-R in pkg-config file
 * POSIX: zip_open: check whether file can be created and fail if not
 * POSIX: fix permissions of new file to match old one
 * fix inconsistent usage of valid flags (not checked in many places)

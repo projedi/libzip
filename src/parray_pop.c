@@ -1,9 +1,9 @@
 /*
-  zip_source_close.c -- close zip_source (stop reading)
-  Copyright (C) 2009 Dieter Baron and Thomas Klausner
+  parray_pop.c -- delete element from array of pointers and return it
+  Copyright (C) 2005-2014 Dieter Baron and Thomas Klausner
 
-  This file is part of libzip, a library to manipulate ZIP archives.
-  The authors can be contacted at <libzip@nih.at>
+  This file is part of ckmame, a program to check rom sets for MAME.
+  The authors can be contacted at <ckmame@nih.at>
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -14,7 +14,7 @@
      notice, this list of conditions and the following disclaimer in
      the documentation and/or other materials provided with the
      distribution.
-  3. The names of the authors may not be used to endorse or promote
+  3. The name of the author may not be used to endorse or promote
      products derived from this software without specific prior
      written permission.
  
@@ -31,22 +31,15 @@
   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <string.h>
 
-#include "zipint.h"
+#include "parray.h"
 
-
-void
-zip_source_close(struct zip_source *src)
+void *
+parray_pop(parray_t *pa)
 {
-    if (!src->is_open)
-	return;
+    if (parray_length(pa) == 0)
+	return NULL;
 
-    if (src->src == NULL)
-	(void)src->cb.f(src->ud, NULL, 0, ZIP_SOURCE_CLOSE);
-    else {
-	(void)src->cb.l(src->src, src->ud, NULL, 0, ZIP_SOURCE_CLOSE);
-	zip_source_close(src->src);
-    }
-    
-    src->is_open = 0;
+    return (parray_get(pa, --pa->nentry));
 }

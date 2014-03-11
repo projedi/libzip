@@ -31,7 +31,6 @@
   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 
 #include "config.h"
 
@@ -50,7 +49,6 @@
 
 #include "zip.h"
 
-
 
 #define FLAG_DRYRUN	1
 #define FLAG_VERBOSE	2
@@ -59,7 +57,7 @@ const char *prg;
 
 #define PROGRAM	"ziptorrent"
 
-const char *usage = "usage: %s [-hnVv] zip [...]\n";
+#define USAGE "usage: %s [-hnVv] zip [...]\n"
 
 char help_head[] =
     PROGRAM " (" PACKAGE ") by Dieter Baron and Thomas Klausner\n\n";
@@ -80,7 +78,6 @@ Copyright (C) 2010 Dieter Baron and Thomas Klausner\n\
 
 static int torrentzip(const char *, int);
 
-
 
 int
 main(int argc, char * const argv[])
@@ -96,7 +93,7 @@ main(int argc, char * const argv[])
 	switch (c) {
 	case 'h':
 	    fputs(help_head, stdout);
-	    printf(usage, prg);
+	    printf(USAGE, prg);
 	    fputs(help, stdout);
 	    exit(0);
 	case 'n':
@@ -110,13 +107,13 @@ main(int argc, char * const argv[])
 	    break;
 
 	default:
-	    fprintf(stderr, usage, prg);
+	    fprintf(stderr, USAGE, prg);
 	    exit(2);
 	}
     }
 
     if (argc == optind) {
-	fprintf(stderr, usage, prg);
+	fprintf(stderr, USAGE, prg);
 	exit(2);
     }
 
@@ -128,7 +125,6 @@ main(int argc, char * const argv[])
     return (err ? 1 : 0);
 }
 
-
 
 static int
 torrentzip(const char *fname, int flags)

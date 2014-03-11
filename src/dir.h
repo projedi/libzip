@@ -1,9 +1,12 @@
-/*
-  zip_source_close.c -- close zip_source (stop reading)
-  Copyright (C) 2009 Dieter Baron and Thomas Klausner
+#ifndef HAD_DIR_H
+#define HAD_DIR_H
 
-  This file is part of libzip, a library to manipulate ZIP archives.
-  The authors can be contacted at <libzip@nih.at>
+/*
+  dir.h -- reading a directory
+  Copyright (C) 2005-2014 Dieter Baron and Thomas Klausner
+
+  This file is part of ckmame, a program to check rom sets for MAME.
+  The authors can be contacted at <ckmame@nih.at>
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -14,7 +17,7 @@
      notice, this list of conditions and the following disclaimer in
      the documentation and/or other materials provided with the
      distribution.
-  3. The names of the authors may not be used to endorse or promote
+  3. The name of the author may not be used to endorse or promote
      products derived from this software without specific prior
      written permission.
  
@@ -32,21 +35,27 @@
 */
 
 
-#include "zipint.h"
+#include "parray.h"
 
+#define DIR_RECURSE	1
 
-void
-zip_source_close(struct zip_source *src)
-{
-    if (!src->is_open)
-	return;
+struct dir {
+    int flags;
+    parray_t *stack;
+};
 
-    if (src->src == NULL)
-	(void)src->cb.f(src->ud, NULL, 0, ZIP_SOURCE_CLOSE);
-    else {
-	(void)src->cb.l(src->src, src->ud, NULL, 0, ZIP_SOURCE_CLOSE);
-	zip_source_close(src->src);
-    }
-    
-    src->is_open = 0;
-}
+typedef struct dir dir_t;
+
+enum dir_status {
+    DIR_ERROR = -1,
+    DIR_OK,
+    DIR_EOD
+};
+
+typedef enum dir_status dir_status_t;
+
+int dir_close(dir_t *);
+dir_status_t dir_next(dir_t *, char *, int);
+dir_t *dir_open(const char *, int);
+
+#endif /* dir.h */

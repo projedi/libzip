@@ -31,7 +31,6 @@
   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 #include "config.h"
 
 #include <errno.h>
@@ -57,11 +56,10 @@ const char *when_name[] = {
 
 static int do_read(struct zip *, const char *, int, enum when, int, int);
 
-
 int verbose;
 
 const char *prg;
-const char * const usage = "usage: %s [-v] archive\n";
+#define USAGE "usage: %s [-v] archive\n"
 
 int
 main(int argc, char *argv[])
@@ -85,14 +83,14 @@ main(int argc, char *argv[])
                 break;
 
             default:
-                fprintf(stderr, usage, prg);
+                fprintf(stderr, USAGE, prg);
                 return 1;
 	}
     }
 
     
     if (argc-optind != 1) {
-        fprintf(stderr, usage, prg);
+        fprintf(stderr, USAGE, prg);
         return 1;
     }
 
@@ -146,7 +144,6 @@ main(int argc, char *argv[])
     exit(fail ? 1 : 0);
 }
 
-
 
 static int
 do_read(struct zip *z, const char *name, int flags,

@@ -31,7 +31,6 @@
   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 
 #include <ctype.h>
 #include <errno.h>
@@ -51,13 +50,12 @@
 
 #include "zip.h"
 #include "compat.h"
-
 
 char *prg;
 
 #define PROGRAM	"zipmerge"
 
-const char *usage = "usage: %s [-DhIiSsV] target-zip zip...\n";
+#define USAGE "usage: %s [-DhIiSsV] target-zip zip...\n"
 
 char help_head[] =
     PROGRAM " (" PACKAGE ") by Dieter Baron and Thomas Klausner\n\n";
@@ -91,7 +89,6 @@ static int confirm_replace(struct zip *, const char *, zip_uint64_t,
 			   struct zip *, const char *, zip_uint64_t);
 static struct zip *merge_zip(struct zip *, const char *, const char *);
 
-
 
 int
 main(int argc, char *argv[])
@@ -129,7 +126,7 @@ main(int argc, char *argv[])
 
 	case 'h':
 	    fputs(help_head, stdout);
-	    printf(usage, prg);
+	    printf(USAGE, prg);
 	    fputs(help, stdout);
 	    exit(0);
 	case 'V':
@@ -137,13 +134,13 @@ main(int argc, char *argv[])
 	    exit(0);
 
 	default:
-	    fprintf(stderr, usage, prg);
+	    fprintf(stderr, USAGE, prg);
 	    exit(2);
 	}
     }
 
     if (argc < optind+2) {
-	fprintf(stderr, usage, prg);
+	fprintf(stderr, USAGE, prg);
 	exit(2);
     }
 
@@ -180,7 +177,6 @@ main(int argc, char *argv[])
     exit(0);
 }
 
-
 
 static int
 confirm_replace(struct zip *za, const char *tname, zip_uint64_t it,
@@ -230,7 +226,6 @@ confirm_replace(struct zip *za, const char *tname, zip_uint64_t it,
     return 0;
 }
 
-
 
 static struct zip *
 merge_zip(struct zip *za, const char *tname, const char *sname)

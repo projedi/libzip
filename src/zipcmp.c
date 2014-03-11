@@ -31,13 +31,11 @@
   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
 
 #include "config.h"
 
 #include <sys/stat.h>
 #include <errno.h>
-#include <fts.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,6 +55,8 @@
 #include "zipint.h"
 #include "zip.h"
 #include "compat.h"
+
+#include "dir.h"
 
 struct archive {
     const char *name;
@@ -86,13 +86,12 @@ struct entry {
     zip_uint32_t comment_length;
 };
 
-
 
 const char *prg;
 
 #define PROGRAM	"zipcmp"
 
-const char *usage = "usage: %s [-hipqtVv] archive1 archive2\n";
+#define USAGE "usage: %s [-hipqtVv] archive1 archive2\n"
 
 char help_head[] =
     PROGRAM " (" PACKAGE ") by Dieter Baron and Thomas Klausner\n\n";
@@ -114,7 +113,6 @@ Copyright (C) 2014 Dieter Baron and Thomas Klausner\n\
 
 #define OPTIONS "hVipqtv"
 
-
 
 #define BOTH_ARE_ZIPS(a)	(a[0].za && a[1].za)
 
@@ -140,7 +138,6 @@ static int test_file(struct zip *za, int idx, zip_int64_t size, unsigned int crc
 int ignore_case, test_files, paranoid, verbose;
 int header_done;
 
-
 
 int
 main(int argc, char * const argv[])
@@ -174,7 +171,7 @@ main(int argc, char * const argv[])
 
 	case 'h':
 	    fputs(help_head, stdout);
-	    printf(usage, prg);
+	    printf(USAGE, prg);
 	    fputs(help, stdout);
 	    exit(0);
 	case 'V':
@@ -182,20 +179,19 @@ main(int argc, char * const argv[])
 	    exit(0);
 
 	default:
-	    fprintf(stderr, usage, prg);
+	    fprintf(stderr, USAGE, prg);
 	    exit(2);
 	}
     }
 
     if (argc != optind+2) {
-	fprintf(stderr, usage, prg);
+	fprintf(stderr, USAGE, prg);
 	exit(2);
     }
 
     exit((compare_zip(argv+optind) == 0) ? 0 : 1);
 }
 
-
 
 static int
 compare_zip(char * const zn[])
@@ -306,66 +302,56 @@ is_directory(const char *name)
 static int
 list_directory(const char *name, struct archive *a)
 {
-    FTS *ftsp;
-    FTSENT *ent;
+    char namebuf[8192];
+    dir_t *dir;
+    dir_status_t status;
     zip_uint64_t nalloc;
-    zip_int64_t crc;
-    char * const names[2] = { (char *)name, NULL };
 
-
-    if ((ftsp = fts_open(names, FTS_LOGICAL|FTS_NOCHDIR, NULL)) == NULL) {
-	/* TODO: error */
+    if ((dir=dir_open(name, DIR_RECURSE)) == NULL) {
+	fprintf(stderr, "%s: can't open directory '%s': %s", prg, name, strerror(errno));
 	return -1;
     }
 
     nalloc = 0;
-    while ((ent=fts_read(ftsp)) != NULL) {
-	switch (ent->fts_info) {
-            case FTS_D:
-            case FTS_DP:
-                break;
-                
-            case FTS_NS:
-            case FTS_DC:
-            case FTS_DNR:
-            case FTS_ERR:
-            case FTS_SLNONE:
-		fprintf(stderr, "%s: fts_read error (%s): %s", prg, ent->fts_path, strerror(errno));
-		fts_close(ftsp);
+    while ((status=dir_next(dir, namebuf, sizeof(namebuf))) == DIR_OK) {
+	struct stat sb;
+	zip_int64_t crc;
+
+	if (stat(namebuf, &sb) < 0) {
+	    fprintf(stderr, "%s: can't stat '%s': %s", prg, namebuf, strerror(errno));
+	    dir_close(dir);
+	    return -1;
+	}
+
+	if (S_ISREG(sb.st_mode)) {
+	    if (a->nentry >= nalloc) {
+		nalloc += 16;
+		a->entry = realloc(a->entry, sizeof(a->entry[0])*nalloc);
+		if (a->entry == NULL) {
+		    fprintf(stderr, "%s: malloc failure", prg);
+		    exit(1);
+		}
+	    }
+
+	    a->entry[a->nentry].name = strdup(namebuf+strlen(a->name)+1);
+	    a->entry[a->nentry].size = sb.st_size;
+	    if ((crc = compute_crc(namebuf)) < 0) {
+		dir_close(dir);
 		return -1;
+	    }
 
-            case FTS_F:
-		if (a->nentry >= nalloc) {
-		    nalloc += 16;
-		    a->entry = realloc(a->entry, sizeof(a->entry[0])*nalloc);
-		    if (a->entry == NULL) {
-			fprintf(stderr, "%s: malloc failure", prg);
-			exit(1);
-		    }
-		}
-
-		a->entry[a->nentry].name = strdup(ent->fts_path+strlen(a->name)+1);
-                a->entry[a->nentry].size = ent->fts_statp->st_size;
-		if ((crc = compute_crc(ent->fts_path)) < 0) {
-		    fts_close(ftsp);
-		    return -1;
-		}
-
-		a->entry[a->nentry].crc = (zip_uint32_t)crc;
-		a->nentry++;
-                break;
-
-            case FTS_DEFAULT:
-            case FTS_NSOK:
-            case FTS_SL:
-            case FTS_DOT:
-                /* TODO shouldn't happen */
-                break;
+	    a->entry[a->nentry].crc = (zip_uint32_t)crc;
+	    a->nentry++;
 	}
     }
 
-    if (fts_close(ftsp) < 0) {
-	fprintf(stderr, "%s: cannot fts_close '%s': %s", prg, a->name, strerror(errno));
+    if (status != DIR_EOD) {
+	fprintf(stderr, "%s: error reading directory '%s': %s", prg, a->name, strerror(errno));
+	dir_close(dir);
+	return -1;
+    }
+    if (dir_close(dir) < 0) {
+	fprintf(stderr, "%s: error closing directory '%s': %s", prg, a->name, strerror(errno));
 	return -1;
     }
 
@@ -377,9 +363,10 @@ static int
 list_zip(const char *name, struct archive *a)
 {
     struct zip *za;
-    int err, i;
+    int err;
     char errstr[1024];
     struct zip_stat st;
+    unsigned int i;
 
     if ((za=zip_open(name, paranoid ? ZIP_CHECKCONS : 0, &err)) == NULL) {
 	zip_error_to_str(errstr, sizeof(errstr), err, errno);
@@ -442,7 +429,6 @@ comment_compare(const char *c1, int l1, const char *c2, int l2) {
     return memcmp(c1, c2, l2);
 }
 
-
 
 static int
 compare_list(char * const name[2],
@@ -451,7 +437,8 @@ compare_list(char * const name[2],
 	     int (*check)(char *const name[2], const void *, const void *),
 	     void (*print)(const void *))
 {
-    int i[2], j, c;
+    unsigned int i[2];
+    int j, c;
     int diff;
 
 #define INC(k)	(i[k]++, l[k]=((const char *)l[k])+size)
@@ -498,7 +485,6 @@ compare_list(char * const name[2],
     return diff;
 }
 
-
 
 static int
 ef_read(struct zip *za, int idx, struct entry *e)
@@ -531,7 +517,6 @@ ef_read(struct zip *za, int idx, struct entry *e)
     return 0;
 }
 
-
 
 static int
 ef_compare(char *const name[2], const struct entry *e1, const struct entry *e2)
@@ -548,7 +533,6 @@ ef_compare(char *const name[2], const struct entry *e1, const struct entry *e2)
 }
 
 
-
 
 static int
 ef_order(const void *ap, const void *bp) {
@@ -566,7 +550,6 @@ ef_order(const void *ap, const void *bp) {
     return memcmp(a->data, b->data, a->size);
 }
 
-
 
 static void
 ef_print(const void *p)
@@ -581,7 +564,6 @@ ef_print(const void *p)
     printf(">\n");
 }
 
-
 
 static int
 entry_cmp(const void *p1, const void *p2)
@@ -606,7 +588,6 @@ entry_cmp(const void *p1, const void *p2)
     return 0;
 }
 
-
 
 static int
 entry_paranoia_checks(char *const name[2], const void *p1, const void *p2) {
@@ -652,7 +633,6 @@ entry_paranoia_checks(char *const name[2], const void *p1, const void *p2) {
 }
 
 
-
 
 static void
 entry_print(const void *p)
@@ -665,7 +645,6 @@ entry_print(const void *p)
     printf("%10lu %08x %s\n", (unsigned long)e->size, e->crc, e->name);
 }
 
-
 
 static int
 test_file(struct zip *za, int idx, zip_int64_t size, unsigned int crc)

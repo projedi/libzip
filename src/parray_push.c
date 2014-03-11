@@ -1,9 +1,9 @@
 /*
-  zip_source_close.c -- close zip_source (stop reading)
-  Copyright (C) 2009 Dieter Baron and Thomas Klausner
+  parray_push.c -- append element to end of array of pointers
+  Copyright (C) 2005-2014 Dieter Baron and Thomas Klausner
 
-  This file is part of libzip, a library to manipulate ZIP archives.
-  The authors can be contacted at <libzip@nih.at>
+  This file is part of ckmame, a program to check rom sets for MAME.
+  The authors can be contacted at <ckmame@nih.at>
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -14,7 +14,7 @@
      notice, this list of conditions and the following disclaimer in
      the documentation and/or other materials provided with the
      distribution.
-  3. The names of the authors may not be used to endorse or promote
+  3. The name of the author may not be used to endorse or promote
      products derived from this software without specific prior
      written permission.
  
@@ -31,22 +31,23 @@
   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <stdlib.h>
 
-#include "zipint.h"
-
+#include "parray.h"
 
 void
-zip_source_close(struct zip_source *src)
+parray_push(parray_t *pa, void *e)
 {
-    if (!src->is_open)
-	return;
-
-    if (src->src == NULL)
-	(void)src->cb.f(src->ud, NULL, 0, ZIP_SOURCE_CLOSE);
-    else {
-	(void)src->cb.l(src->src, src->ud, NULL, 0, ZIP_SOURCE_CLOSE);
-	zip_source_close(src->src);
+    if (pa->nentry >= pa->alloc_len) {
+	void **tmp;
+	if (pa->alloc_len == 0)
+	    pa->alloc_len = 1;
+	else
+	    pa->alloc_len *= 2;
+	if ((tmp=realloc(pa->entry, sizeof(pa->entry[0])*pa->alloc_len)) == NULL)
+	    exit(1);
+	pa->entry = tmp;
     }
-    
-    src->is_open = 0;
+
+    pa->entry[pa->nentry++] = e;
 }

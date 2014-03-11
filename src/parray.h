@@ -1,9 +1,12 @@
-/*
-  zip_source_close.c -- close zip_source (stop reading)
-  Copyright (C) 2009 Dieter Baron and Thomas Klausner
+#ifndef _HAD_PARRAY_H
+#define _HAD_PARRAY_H
 
-  This file is part of libzip, a library to manipulate ZIP archives.
-  The authors can be contacted at <libzip@nih.at>
+/*
+  parray.h -- array of pointers
+  Copyright (C) 2005-2014 Dieter Baron and Thomas Klausner
+
+  This file is part of ckmame, a program to check rom sets for MAME.
+  The authors can be contacted at <ckmame@nih.at>
 
   Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions
@@ -14,7 +17,7 @@
      notice, this list of conditions and the following disclaimer in
      the documentation and/or other materials provided with the
      distribution.
-  3. The names of the authors may not be used to endorse or promote
+  3. The name of the author may not be used to endorse or promote
      products derived from this software without specific prior
      written permission.
  
@@ -31,22 +34,24 @@
   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+struct parray {
+    void **entry;
+    int nentry;
+    int alloc_len;
+};
 
-#include "zipint.h"
+typedef struct parray parray_t;
 
+#define parray_get(a, i)	((a)->entry[i])
+#define parray_get_last(a)	\
+	(parray_length(a) ? parray_get((a), parray_length(a)-1) : NULL)
+#define parray_length(a)	((a)->nentry)
+#define parray_new()		(parray_new_sized(0))
 
-void
-zip_source_close(struct zip_source *src)
-{
-    if (!src->is_open)
-	return;
+/* function arguments not specified to avoid lots of casts */
+void parray_free(parray_t *, void (*)(/* void * */));
+parray_t *parray_new_sized(int);
+void *parray_pop(parray_t *);
+void parray_push(parray_t *, void *);
 
-    if (src->src == NULL)
-	(void)src->cb.f(src->ud, NULL, 0, ZIP_SOURCE_CLOSE);
-    else {
-	(void)src->cb.l(src->src, src->ud, NULL, 0, ZIP_SOURCE_CLOSE);
-	zip_source_close(src->src);
-    }
-    
-    src->is_open = 0;
-}
+#endif /* parray.h */
